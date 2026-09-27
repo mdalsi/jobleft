@@ -145,10 +145,11 @@ test('pacing: two processes sharing the database never send to one host less tha
     // a busy shared runner (Windows) shows up as a shorter measured gap. Still well over a second on a quiet machine.
     const slack = process.platform === 'win32' ? 400 : 15;
     for (let i = 1; i < times.length; i++) assert.ok(times[i]! - times[i - 1]! >= MIN_GAP_MS - slack, `gap ${times[i]! - times[i - 1]!}`);
-    // A different host is not held up.
-    const t0 = Date.now();
+    // A different host is not held up. On the monotonic clock, with room for a loaded shared runner: the point is
+    // that it stays far below the 1100 ms slot this host's sibling booked, not that it lands under a fifth of a second.
+    const t0 = performance.now();
     await pa.wait('other.example', 0);
-    assert.ok(Date.now() - t0 < 200);
+    assert.ok(performance.now() - t0 < (process.platform === 'win32' ? 600 : 200));
   } finally { a?.close(); b?.close(); cleanup(dir); } // closed before the removal: Windows cannot delete an open database
 });
 
