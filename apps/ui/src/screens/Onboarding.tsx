@@ -185,7 +185,10 @@ export function Onboarding() {
   const leave = async (goto: string, how: 'done' | 'skipped') => {
     if (leavingRef.current) return;
     leavingRef.current = true; setLeaving(goto);
-    const saved = await persist(bodyToSave(cleanForSave(d), imported));
+    // Skipping is the way out of the setup at any step, so it must not be held by facts the import brought in: if the
+    // profile is refused with them, leave with what the person typed instead of stopping on a screen with no way on.
+    let saved = await persist(bodyToSave(cleanForSave(d), imported));
+    if (!saved && how === 'skipped' && imported) saved = await persist(bodyToSave(cleanForSave(d), null));
     if (!saved) { leavingRef.current = false; setLeaving(null); return; }
     await keep(closedState(status.current, how), true);
     if (how === 'done' || !getFeed().initialized) setFeed({ filter: filterFromProfile(saved), initialized: true, savedId: null });
