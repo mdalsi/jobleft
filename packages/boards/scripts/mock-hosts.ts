@@ -32,7 +32,15 @@ export interface MockConfig {
   robots?: Record<string, string>;
   paid?: { balanceMicros?: number; priceMicros?: number; pages?: Record<string, string> };
 }
-export interface MockRequest { at: number; host: string; method: string; path: string; headers: Record<string, string | string[] | undefined>; body: string }
+export interface MockRequest {
+  /** The wall clock. A shared runner can step it (NTP, VM time sync), so subtracting two `at` values can read a
+   * step as a 2 ms gap. Pacing assertions belong on `atMono`. */
+  at: number;
+  /** Monotonic milliseconds since the process started (performance.now()): the gap between two requests as real
+   * elapsed time, immune to a wall-clock step. */
+  atMono: number;
+  host: string; method: string; path: string; headers: Record<string, string | string[] | undefined>; body: string
+}
 
 export const MOCK_HOSTS = [
   'boards-api.greenhouse.io', 'api.lever.co', 'api.eu.lever.co', 'api.ashbyhq.com',
@@ -102,7 +110,7 @@ export async function startMockHosts(config: MockConfig, opts: { logFile?: strin
       req.on('data', (c: Buffer) => chunks.push(c));
       req.on('end', () => {
         const url = new URL(req.url ?? '/', 'http://x');
-        const entry: MockRequest = { at: Date.now(), host, method: req.method ?? 'GET', path: url.pathname + url.search, headers: req.headers, body: Buffer.concat(chunks).toString('utf8') };
+        const entry: MockRequest = { at: Date.now(), atMono: performance.now(), host, method: req.method ?? 'GET', path: url.pathname + url.search, headers: req.headers, body: Buffer.concat(chunks).toString('utf8') };
         log.push(entry);
         if (opts.logFile) appendFileSync(opts.logFile, JSON.stringify({ ...entry, at: new Date(entry.at).toISOString() }) + '\n');
         const json = (status: number, v: unknown, h: Record<string, string> = {}) => { res.writeHead(status, { 'content-type': 'application/json', ...h }); res.end(JSON.stringify(v)); };
@@ -166,7 +174,7 @@ export async function startMockHosts(config: MockConfig, opts: { logFile?: strin
       req.on('data', (c: Buffer) => chunks.push(c));
       req.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8');
-        log.push({ at: Date.now(), host: 'paid-fetch', method: req.method ?? 'GET', path: req.url ?? '/', headers: req.headers, body });
+        log.push({ at: Date.now(), atMono: performance.now(), host: 'paid-fetch', method: req.method ?? 'GET', path: req.url ?? '/', headers: req.headers, body });
         if (opts.logFile) appendFileSync(opts.logFile, JSON.stringify({ at: new Date().toISOString(), host: 'paid-fetch', method: req.method, path: req.url, body }) + '\n');
         res.setHeader('content-type', 'application/json');
         if (req.method === 'GET' && req.url === '/balance') { res.end(JSON.stringify(paid)); return; }

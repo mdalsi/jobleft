@@ -93,6 +93,25 @@ function looksLikeName(t: string): boolean {
   return w.every((x) => /^[\p{Lu}][\p{L}'’.-]*$/u.test(x) || /^(?:de|da|del|van|von|der|den|la|le|di|du|bin|al)$/i.test(x));
 }
 
+/** Words that begin an address line, in the languages the contact block sees ("Via 37139" is a street, not a name). */
+const ADDRESS_HEAD = /^(?:via|viale|piazzale|piazza|corso|strada|largo|vicolo|street|avenue|road|drive|lane|way|place|boulevard|court|square|rue|calle|apartment|apt|suite|ste|unit|flat|floor|p\.?o\.? box)\b/i;
+const NAME_WORD = /^[\p{Lu}][\p{L}'’.-]*$/u;
+const NAME_PARTICLE = /^(?:de|da|del|della|dello|degli|dei|van|von|der|den|la|le|di|du|bin|al|el)$/i;
+
+/**
+ * The loose fallback for a name the strict shape above refuses (a surname in capitals, a particle). Every word must
+ * be letters: an address or anything holding a figure is never a name. A street address was taken as the name here
+ * ("Via 37139"), and its last name "37139" then failed the profile's letter rule on a setup screen that has no name
+ * box, leaving the person stuck with nothing to fix.
+ */
+function isNameShaped(t: string): boolean {
+  const words = t.trim().split(/\s+/);
+  if (words.length < 1 || words.length > 4) return false;
+  if (/[\d@/|:]/.test(t)) return false;
+  if (ADDRESS_HEAD.test(t.trim())) return false;
+  return words.every((w) => NAME_WORD.test(w) || NAME_PARTICLE.test(w));
+}
+
 function parseContact(lines: SrcLine[]): Contact {
   const c: Contact = { name: null, email: null, phone: null, city: null, region: null, links: [], unread: [] };
   // Join a link that was broken over two lines ("https://github.com/jordan-" + "testwell-example").
@@ -134,7 +153,7 @@ function parseContact(lines: SrcLine[]): Contact {
     rest = rest.replace(/[|•·,;]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (!rest) continue;
     if (!c.name && looksLikeName(rest)) { c.name = rest; continue; }
-    if (!c.name && !isContactLine(rest) && rest.split(' ').length <= 4 && /^[\p{Lu}]/u.test(rest)) { c.name = rest; continue; }
+    if (!c.name && !isContactLine(rest) && isNameShaped(rest)) { c.name = rest; continue; }
     c.unread.push(rest);
   }
   return c;
