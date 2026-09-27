@@ -132,10 +132,11 @@ test('a board that answers 429 waits at least its Retry-After, and the host gets
     const e = r.service.get('greenhouse:busy')!;
     assert.equal(e.state, 'blocked');
     assert.ok(Date.parse(e.nextCheckAt!) - r.clock.now >= 15 * 60_000, 'at least 15 minutes, and at least the Retry-After');
-    const t = r.mock.log.filter((x) => x.host === 'boards-api.greenhouse.io' && x.path.startsWith('/v1/')).map((x) => x.at);
+    const t = r.mock.log.filter((x) => x.host === 'boards-api.greenhouse.io' && x.path.startsWith('/v1/')).map((x) => x.atMono);
     const i429 = r.mock.log.findIndex((x) => x.path.startsWith('/v1/boards/busy'));
     const after = r.mock.log.slice(i429 + 1).filter((x) => x.host === 'boards-api.greenhouse.io');
-    for (const x of after) assert.ok(x.at - r.mock.log[i429]!.at >= 2900, `next request to the host after ${x.at - r.mock.log[i429]!.at} ms`);
+    // Real elapsed time, not the wall clock: a shared runner can step Date.now() and a step reads as a tiny gap.
+    for (const x of after) assert.ok(x.atMono - r.mock.log[i429]!.atMono >= 2900, `next request to the host after ${Math.round(x.atMono - r.mock.log[i429]!.atMono)} ms`);
     assert.ok(t.length >= 1);
   } finally { await r.close(); }
 });

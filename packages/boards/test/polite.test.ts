@@ -19,10 +19,11 @@ test('two clients with separate pacers on one database still space requests to a
     const b = createBoardHttp({ pacer: p2, hostMap: mock.hostMap });
     const url = 'https://boards-api.greenhouse.io/v1/boards/acme/jobs?content=true';
     await Promise.all([...Array(4)].flatMap(() => [a.getJson(url), b.getJson(url)]));
-    const times = mock.log.filter((e) => e.host === 'boards-api.greenhouse.io').map((e) => e.at).sort((x, y) => x - y);
-    // Windows timers can wake a few ms before Date.now() says so (15.6 ms clock granularity); a little slack there.
-    const slack = process.platform === 'win32' ? 200 : 0; // shared runners: the first waiter wakes late, the gap measures wake times
-    for (let i = 1; i < times.length; i++) assert.ok(times[i]! - times[i - 1]! >= 250 - slack, `gap ${times[i]! - times[i - 1]!} ms`);
+    const times = mock.log.filter((e) => e.host === 'boards-api.greenhouse.io').map((e) => e.atMono).sort((x, y) => x - y);
+    // The gaps are real elapsed time (performance.now()), not the wall clock: a shared runner can step Date.now(),
+    // and two wall-clock stamps that straddle a step then read as a gap that never happened. This suite reported
+    // "gap 2 ms" on windows-latest while the pacer had spaced the requests correctly.
+    for (let i = 1; i < times.length; i++) assert.ok(times[i]! - times[i - 1]! >= 250, `gap ${Math.round(times[i]! - times[i - 1]!)} ms`);
     for (const e of mock.log) assert.equal(e.headers['user-agent'], USER_AGENT);
   } finally { p1.close(); p2.close(); await mock.close(); rmSync(dir, { recursive: true, force: true }); }
 });
@@ -40,9 +41,9 @@ test('a host that answers 429 with Retry-After gets no request before that time;
     await assert.rejects(http.getJson('https://boards-api.greenhouse.io/v1/boards/busy/jobs'));
     const http2 = createBoardHttp({ pacer, hostMap: mock.hostMap }); // a new client: same shared schedule
     await http2.getJson('https://boards-api.greenhouse.io/v1/boards/busy/jobs');
-    const t = mock.log.filter((e) => e.path.startsWith('/v1/boards/busy')).map((e) => e.at);
+    const t = mock.log.filter((e) => e.path.startsWith('/v1/boards/busy')).map((e) => e.atMono);
     assert.equal(t.length, 2);
-    assert.ok(t[1]! - t[0]! >= 1900, `waited ${t[1]! - t[0]!} ms after Retry-After: 2`);
+    assert.ok(t[1]! - t[0]! >= 1900, `waited ${Math.round(t[1]! - t[0]!)} ms after Retry-After: 2`);
     await assert.rejects(http.getText('https://careers.mock.example/private/jobs.html'), /robots/);
     assert.equal(mock.log.filter((e) => e.path.startsWith('/private')).length, 0, 'the blocked path got no request');
   } finally { pacer.close(); await mock.close(); rmSync(dir, { recursive: true, force: true }); }
