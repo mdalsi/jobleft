@@ -42,7 +42,10 @@ export function dailyLimitText(w: PublikWallet, now: number = Date.now()): { sum
  */
 export function zeroBalanceText(w: PublikWallet): string | null {
   if (w.balanceMicros > 0) return null;
+  // The words, never the figure: the QA rule for the Balance screen bans a bare $0 (an unfetched wallet renders as
+  // one), so the line that explains a zero balance says "zero" and leaves the dollars to the balance shown above it
+  // when there is something to show.
   return w.claimState === 'anonymous'
-    ? `Your publik balance is ${formatDollars(0)}, so AI steps cannot run yet. Link this computer to your publik account for $0.05 of free use, once, or add money at publik.`
-    : `Your publik balance is ${formatDollars(0)}, so AI steps cannot run until you add money at publik.`;
+    ? `Your publik balance is zero, so AI steps cannot run yet. Link this computer to your publik account for $0.05 of free use, once, or add money at publik.`
+    : `Your publik balance is zero, so AI steps cannot run until you add money at publik.`;
 }

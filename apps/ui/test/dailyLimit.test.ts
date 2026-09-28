@@ -33,11 +33,13 @@ test('JL-v2-5: a $0.00 balance on an unlinked computer says linking gives $0.05 
   const { zeroBalanceText } = await import('../src/lib/dailyLimit.ts');
   const fresh = zeroBalanceText({ ...base, balanceMicros: 0, starterRemainingMicros: null, claimState: 'anonymous', week: { usedMicros: 0, budgetMicros: null, resetsAt: null } })!;
   assert.match(fresh, /Link this computer to your publik account for \$0\.05 of free use, once/);
-  assert.match(fresh, /\$0\.00/);
+  assert.match(fresh, /balance is zero/);
   const spent = zeroBalanceText({ ...base, balanceMicros: 0, starterRemainingMicros: 0, claimState: 'claimed' })!;
   assert.doesNotMatch(spent, /\$0\.05/);
   assert.match(spent, /add money at publik/);
-  assert.match(spent, /\$0\.00/);
+  assert.match(spent, /balance is zero/);
+  // The Balance screen may not print $0 (the QA rule): an unfetched wallet renders as one, so the line says "zero".
+  for (const t of [fresh, spent]) assert.doesNotMatch(t, /\$0(\.00)?(?![.\d])/);
   for (const t of [fresh, spent]) assert.doesNotMatch(t, /credit/i);
   assert.equal(zeroBalanceText(base), null, 'no line while money is left');
 });
