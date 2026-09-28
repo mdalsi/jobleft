@@ -22,6 +22,11 @@ import { readAllPages } from '../lib/pages.ts';
 import { rememberAiCheck } from '../lib/aiHealth.ts';
 import { dailyLimitText, zeroBalanceText } from '../lib/dailyLimit.ts';
 
+/** Where keys are kept on this system: the macOS Keychain, or an encrypted file in the data folder elsewhere (Windows). */
+function secureStore(): string {
+  return /Mac|iPhone|iPad/.test(navigator.userAgent) ? 'the macOS Keychain' : 'an encrypted file in the data folder';
+}
+
 const TABS = [
   { key: 'ai', label: 'AI provider', icon: <ApiOutlined /> },
   { key: 'balance', label: 'Balance', icon: <WalletOutlined /> },
@@ -147,7 +152,7 @@ function AiTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Panel title="Where AI answers come from" desc="AI helps with chat, tailoring, cover letters, messages and interview practice. Pick one. jobleft uses only the one you pick; it never switches to another on its own.">
         <div className="jl-choice-grid">
-          {card('publik', <CloudOutlined />, 'publik API', 'Pay per use from a dollar balance. publik may add a small free starting amount.')}
+          {card('publik', <CloudOutlined />, 'publik API', 'Pay per use from a dollar balance. Link your publik account for $0.05 of free use, once.')}
           {card('local', <DesktopOutlined />, 'A model on this computer', 'Ollama, LM Studio, llama.cpp, MLX or similar. Nothing leaves this computer. Free, but the small models that fit on a laptop tailor and answer noticeably worse than the hosted ones.')}
           {card('custom', <LinkOutlined />, 'A custom address', 'Any OpenAI-compatible server you run or trust.')}
           {card('own_key', <KeyOutlined />, 'Your own key', 'Your account with an AI vendor. The vendor bills you.')}
@@ -176,7 +181,7 @@ function AiTab() {
           : <Alert type="error" showIcon message={check.message} action={(check as ProviderCheck & { link?: { label: string; url: string } }).link ? <Button size="small" onClick={() => openExternal((check as ProviderCheck & { link: { url: string } }).link.url)}>{(check as ProviderCheck & { link: { label: string } }).link.label}</Button> : undefined} />)}
       </Panel>
       {(kind === 'custom' || kind === 'own_key' || kind === 'local') && (
-        <Panel title={kind === 'own_key' ? `Your ${keyFor} key` : 'Key'} desc={<>Kept in this computer's secret store, never in a file. Only its last 4 characters are ever shown. It goes only to {kind === 'own_key' ? keyFor : 'the address above'}.{!sameKeySlot ? ' Saving the key also saves this provider choice.' : ''}</>}>
+        <Panel title={kind === 'own_key' ? `Your ${keyFor} key` : 'Key'} desc={<>Kept in {secureStore()}, never in a plain file. Only its last 4 characters are ever shown. It goes only to {kind === 'own_key' ? keyFor : 'the address above'}.{!sameKeySlot ? ' Saving the key also saves this provider choice.' : ''}</>}>
           {sameKeySlot && s.keySet ? (
             <Space><Tag icon={<KeyOutlined />}>Key saved, ending in {s.keyHint}</Tag><Popconfirm title="Forget this key?" onConfirm={() => { void forgetKey(); }}><Button shape="round">Forget key</Button></Popconfirm></Space>
           ) : (
@@ -203,7 +208,7 @@ const FIT_STATE: Record<string, string> = {
 };
 
 const DISCLOSURE = [
-  'jobleft can send its AI requests to the publik API: each request is priced per use and paid in dollars from your publik balance. publik may add a small free starting amount; it limits these, so a balance can also start at $0.00.',
+  'jobleft can send its AI requests to the publik API: each request is priced per use and paid in dollars from your publik balance. Your balance starts at $0.00; linking a publik account gives $0.05 of free use, once.',
   "Your prompts go through publik's servers to the AI model's provider, publik does not train on them, and you can change to a local model or your own key at any time.",
 ];
 /** publik's live price list (JL-settings-25): every price the app quotes can be checked there. */
@@ -260,7 +265,7 @@ function BalanceTab() {
           <p className="jl-small" style={{ margin: 0 }}><a href={PRICING_URL} target="_blank" rel="noopener noreferrer">See publik's prices per tier</a> before you connect.</p>
           <Checkbox checked={agree} onChange={(e) => setAgree(e.target.checked)}>I have read this</Checkbox>
           <Button type="primary" shape="round" style={{ alignSelf: 'flex-start' }} disabled={!agree} loading={busy === 'connect'} onClick={() => { void connect(); }}>{notProvider ? 'Connect and use publik for AI' : 'Connect to publik'}</Button>
-          <p className="jl-small jl-muted" style={{ margin: 0 }}>No key is typed. jobleft keeps the connection key in this computer's secret store.</p>
+          <p className="jl-small jl-muted" style={{ margin: 0 }}>No key is typed. jobleft keeps the connection key in {secureStore()}.</p>
         </Panel>
       )}
       {c && c.state === 'connected' && w && (
@@ -449,7 +454,7 @@ function DataTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <InlineError error={err} />
-      <Panel title="Where your data lives" desc="Everything is on this computer, in one folder. Keys are in this computer's secret store, not in the folder.">
+      <Panel title="Where your data lives" desc={`Everything is on this computer, in one folder. Keys are in ${secureStore()}, not in plain files.`}>
         {storage.data ? (
           <Descriptions size="small" column={1} items={[
             { key: 'd', label: 'Data folder', children: <code style={{ overflowWrap: 'anywhere' }}>{storage.data.dataDir}</code> },

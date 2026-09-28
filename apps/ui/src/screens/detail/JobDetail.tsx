@@ -280,7 +280,7 @@ export function JobDetail({ id, onClose }: { id: string; onClose: () => void }) 
                   <Fact icon={<IdcardOutlined />} label="Level" unknown="Level not stated">{levelsText(job.levels)}</Fact>
                   <Fact icon={<CalendarOutlined />} label="Experience" unknown="Years of experience not stated">{yearsText(job.yearsRequired)}</Fact>
                   <Fact icon={<ApartmentOutlined />} label="Department">{job.department}</Fact>
-                  <Fact icon={<DollarOutlined />} label="Pay" unknown="Pay not listed in the posting">
+                  <Fact icon={<DollarOutlined />} label="Pay" unknown="Pay not stated">
                     {payText(job.pay) && (
                       <span>
                         {payText(job.pay)}
