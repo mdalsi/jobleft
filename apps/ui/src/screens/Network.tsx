@@ -103,7 +103,9 @@ function CompanyCard({ x, onOpen, onEveryone }: { x: CompanyCoverage; onOpen: (c
 }
 
 function CompaniesTab({ onOpen, onEveryone }: { onOpen: (c: Contact) => void; onEveryone: (key: string, name: string) => void }) {
-  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'));
+  // Your target companies are the companies of the jobs you liked, applied to or added, so the view reads them again
+  // every time it opens: a company you just tracked has to be there without a reload.
+  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'), { revalidate: true });
   const cov = coverage.data ?? [];
   const known = cov.filter((x) => x.count > 0);
   const nobody = cov.filter((x) => x.count === 0);
@@ -185,7 +187,9 @@ function PeopleTab({ company, clearCompany, onOpen, onDraft, groups }: { company
 function PlanTab({ onOpen, onDraft }: { onOpen: (c: Contact) => void; onDraft: (c: Contact) => void }) {
   const plan = useApi<CoffeeChatPlanEntry[]>('network:plan', () => call('networkPlan'));
   // A company that is also a target is headed with the target's name, as on its Companies card (JL-network-8).
-  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'));
+  // Your target companies are the companies of the jobs you liked, applied to or added, so the view reads them again
+  // every time it opens: a company you just tracked has to be there without a reload.
+  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'), { revalidate: true });
   const targetName = new Map((coverage.data ?? []).map((x) => [x.companyKey, x.companyName]));
   const people = useApi<Contact[]>('network:contacts:plan', () => call('listContacts', { query: { inPlan: 'true' } }));
   const byId = new Map((people.data ?? []).map((c) => [c.id, c]));
@@ -269,7 +273,9 @@ export function NetworkScreen({ tab }: { tab: string | null }) {
   const due = useApi<Contact[]>('network:contacts:due', () => call('listContacts', { query: { due: 'true' } }));
   const planCount = useApi<Contact[]>('network:contacts:plan', () => call('listContacts', { query: { inPlan: 'true' } }));
   // A message to someone at a target company is about the person's job there (JL-network-22).
-  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'));
+  // Your target companies are the companies of the jobs you liked, applied to or added, so the view reads them again
+  // every time it opens: a company you just tracked has to be there without a reload.
+  const coverage = useApi<CompanyCoverage[]>('network:coverage', () => call('networkCoverage'), { revalidate: true });
   const target = draftFor?.companyKey ? coverage.data?.find((x) => x.companyKey === draftFor.companyKey) : undefined;
   const draftJob = target?.jobs?.[0] ?? null;
   const active = tab ?? 'companies';

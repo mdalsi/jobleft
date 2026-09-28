@@ -50,7 +50,9 @@ export function App() {
   // At launch, a setup that was never finished or skipped opens again, on the step the person was on
   // (JL-onboarding-11: a saved preference alone never counts as a finished setup).
   useEffect(() => {
-    if (gateChecked.current || !profile.data || !setup.data) return;
+    // Only the setup answer decides where the app opens: waiting for the profile as well held the first paint a whole
+    // round trip longer, and the feed renders without it.
+    if (gateChecked.current || !setup.data) return;
     gateChecked.current = true;
     const legacy = onboardingSkipped();
     if (setup.data.status === 'new' && legacy) {
@@ -66,7 +68,7 @@ export function App() {
   // person's screen for as long as the answer took, then yanked them to the setup. A screen that cannot be used is
   // worse than a moment of "getting ready", and on a machine busy with its first crawl it lasted seconds.
   // A failed call falls through, so an unreachable service still shows its own error instead of waiting forever.
-  if (!gateDone && !setup.error && !profile.error) return <main className="jl-onboard"><Loading label="Getting ready" /></main>;
+  if (!gateDone && !setup.error) return <main className="jl-onboard"><Loading label="Getting ready" /></main>;
   if (route[0] === 'onboarding') {
     document.title = 'Welcome · jobleft';
     return <ErrorBoundary label="Setup stopped working"><Onboarding /></ErrorBoundary>;
