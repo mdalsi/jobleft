@@ -8,6 +8,7 @@
 // edited (same id as before); the editors check every entry of the block the person is editing.
 
 import type { ProfileInput } from './profile.ts';
+import { isCountryCode } from './countries.ts';
 
 export type ProfileBlock = 'personal' | 'education' | 'work' | 'projects' | 'preferences';
 export interface ProfileIssue { block: ProfileBlock; path: string; message: string }
@@ -123,6 +124,25 @@ export function profileIssues(next: ProfileInput, prev: ProfileInput | null, now
   const pay = next.preferences.minAnnualPayUsd;
   if (pay !== null && pay > PROFILE_LIMITS.minAnnualPayUsd && (!prev || prev.preferences.minAnnualPayUsd !== pay)) {
     out.push({ block: 'preferences', path: '/preferences/minAnnualPayUsd', message: `Minimum yearly pay: type an amount up to $${PROFILE_LIMITS.minAnnualPayUsd.toLocaleString('en-US')}.` });
+  }
+  // Countries are codes from the one shared list (JL-onboarding-27). A code the pickers cannot produce - typed into
+  // the API, or invented - is refused, so the profile never holds one nobody can match work against. Only when it is
+  // new: a code stored before this check never blocks saving something else.
+  const home = p.country;
+  if (home && !isCountryCode(home) && (!was || was.country !== home)) {
+    out.push({ block: 'personal', path: '/personal/country', message: 'Country: choose a country from the list.' });
+  }
+  const countries = next.preferences.countries;
+  if (!prev || JSON.stringify(prev.preferences.countries) !== JSON.stringify(countries)) {
+    countries.forEach((c, i) => {
+      if (!isCountryCode(c)) out.push({ block: 'preferences', path: `/preferences/countries/${i}`, message: `Countries to work in, row ${i + 1}: choose a country from the list.` });
+    });
+  }
+  const allowed = next.workAuthorization.authorizedCountries;
+  if (!prev || JSON.stringify(prev.workAuthorization.authorizedCountries) !== JSON.stringify(allowed)) {
+    allowed.forEach((c, i) => {
+      if (!isCountryCode(c)) out.push({ block: 'preferences', path: `/workAuthorization/authorizedCountries/${i}`, message: `Other countries where you may work, row ${i + 1}: choose a country from the list.` });
+    });
   }
   return out;
 }

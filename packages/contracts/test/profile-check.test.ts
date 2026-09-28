@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankToNull, emptyProfileLike, profileIssues, type ProfileInput } from './profile-check-fixture.ts';
+import { COUNTRY_CODES, isCountryCode } from '../src/index.ts';
 
 const NOW = new Date('2026-09-27T12:00:00Z');
 
@@ -63,4 +64,22 @@ test('a minimum yearly pay has a sane ceiling (JL-onboarding-21)', () => {
   assert.deepEqual(profileIssues(huge, null, NOW).map((i) => i.message), ['Minimum yearly pay: type an amount up to $10,000,000.']);
   assert.deepEqual(profileIssues({ ...p, preferences: { ...p.preferences, minAnnualPayUsd: 150000 } }, null, NOW), []);
   assert.deepEqual(profileIssues(huge, huge, NOW), [], 'a value stored earlier never blocks another save');
+});
+
+test('the country list is the ISO codes, each once (JL-onboarding-27)', () => {
+  assert.equal(COUNTRY_CODES.length, 249, 'the 249 assigned ISO 3166-1 alpha-2 codes');
+  assert.equal(new Set(COUNTRY_CODES).size, COUNTRY_CODES.length, 'no code twice');
+  for (const c of COUNTRY_CODES) assert.match(c, /^[A-Z]{2}$/, c);
+  assert.ok(isCountryCode('IT') && isCountryCode('IN') && isCountryCode('JP'));
+  assert.ok(!isCountryCode('XX') && !isCountryCode('uk') && !isCountryCode(''));
+});
+
+test('a country has to be one a person can pick (JL-onboarding-27)', () => {
+  const p = emptyProfileLike();
+  const invented = { ...p, preferences: { ...p.preferences, countries: ['US', 'XX'] } };
+  assert.deepEqual(profileIssues(invented, null, NOW).map((i) => i.message), ['Countries to work in, row 2: choose a country from the list.']);
+  assert.deepEqual(profileIssues({ ...p, personal: { ...p.personal, country: 'XX' } }, null, NOW).map((i) => i.message), ['Country: choose a country from the list.']);
+  assert.deepEqual(profileIssues({ ...p, workAuthorization: { ...p.workAuthorization, authorizedCountries: ['DE', 'ZZ'] } }, null, NOW).map((i) => i.message), ['Other countries where you may work, row 2: choose a country from the list.']);
+  assert.deepEqual(profileIssues({ ...p, personal: { ...p.personal, country: 'IT' }, preferences: { ...p.preferences, countries: ['US', 'IN'] }, workAuthorization: { ...p.workAuthorization, authorizedCountries: ['CA'] } }, null, NOW), [], 'countries a person can pick pass');
+  assert.deepEqual(profileIssues(invented, invented, NOW), [], 'a code stored earlier never blocks another save');
 });

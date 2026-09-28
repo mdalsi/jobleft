@@ -18,6 +18,7 @@ export * from './schema.ts';
 export * from './validate.ts';
 export * from './clock.ts';
 export * from './common.ts';
+export * from './countries.ts';
 export * from './job.ts';
 export * from './company.ts';
 export * from './match.ts';
