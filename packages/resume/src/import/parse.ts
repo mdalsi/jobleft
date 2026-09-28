@@ -96,7 +96,7 @@ function looksLikeName(t: string): boolean {
 /** Words that begin an address line, in the languages the contact block sees ("Via 37139" is a street, not a name). */
 const ADDRESS_HEAD = /^(?:via|viale|piazzale|piazza|corso|strada|largo|vicolo|street|avenue|road|drive|lane|way|place|boulevard|court|square|rue|calle|apartment|apt|suite|ste|unit|flat|floor|p\.?o\.? box)\b/i;
 const NAME_WORD = /^[\p{Lu}][\p{L}'’.-]*$/u;
-const NAME_PARTICLE = /^(?:de|da|del|della|dello|degli|dei|van|von|der|den|la|le|di|du|bin|al|el)$/i;
+const NAME_PARTICLE = /^(?:de|da|das|do|dos|del|della|dello|degli|dei|di|du|van|von|der|den|ter|ten|te|op|la|le|les|los|las|el|al|bin|bint|ibn|ben|abu|san|santa|st|mac|mc|o')$/i;
 
 /**
  * The loose fallback for a name the strict shape above refuses (a surname in capitals, a particle). Every word must
@@ -106,7 +106,10 @@ const NAME_PARTICLE = /^(?:de|da|del|della|dello|degli|dei|van|von|der|den|la|le
  */
 function isNameShaped(t: string): boolean {
   const words = t.trim().split(/\s+/);
-  if (words.length < 1 || words.length > 4) return false;
+  // A name can have more parts than four: a surname with particles plus a second surname ("Ana Maria de la Cruz
+  // Fernandez", "Fatima bint Mohammed Al Rashid"). Six is as far as a person's name goes without letting a capitalised
+  // job-title line through, and the capital-start rule above already keeps prose out.
+  if (words.length < 1 || words.length > 6) return false;
   if (/[\d@/|:]/.test(t)) return false;
   if (ADDRESS_HEAD.test(t.trim())) return false;
   return words.every((w) => NAME_WORD.test(w) || NAME_PARTICLE.test(w));
@@ -622,10 +625,24 @@ export function parseLines(lines: SrcLine[], _opts: { source: 'pdf' | 'docx' | '
     extraSections,
   };
   if (contact.name) {
-    const parts = contact.name.split(/\s+/);
+    const parts = contact.name.split(/\s+/).filter(Boolean);
+    // A surname can have more parts than one: "van der Berg", "de la Cruz Fernandez". The particles in front of the
+    // last word belong to the surname, and only what is left in the middle is a middle name. Sending the particles to
+    // the middle name made a name with more parts read as a different name, and left the surname field with a fragment.
+    // The surname starts at the last group of consecutive particles ("de la Cruz Fernandez", "van der Berg"), so a
+    // patronymic in front of it stays a middle name and "Al Rashid" is not read as "bint Mohammed Al Rashid".
+    let surnameFrom = -1;
+    for (let i = parts.length - 2; i >= 1; i--) {
+      if (!NAME_PARTICLE.test(parts[i]!)) continue;
+      surnameFrom = i;
+      while (surnameFrom > 1 && NAME_PARTICLE.test(parts[surnameFrom - 1]!)) surnameFrom--;
+      break;
+    }
+    const surnameAt = surnameFrom >= 1 ? surnameFrom : parts.length - 1;
     profile.personal.firstName = parts[0]!;
-    if (parts.length > 1) profile.personal.lastName = parts[parts.length - 1]!;
-    if (parts.length > 2) profile.personal.middleName = parts.slice(1, -1).join(' ');
+    if (parts.length > 1) profile.personal.lastName = parts.slice(surnameAt).join(' ');
+    const middle = parts.slice(1, surnameAt).join(' ');
+    if (middle) profile.personal.middleName = middle;
   }
   // Bullets as the file shows them (under jobs, degrees and projects; a "GPA: 3.7" bullet counts too).
   const bullets = sourceBullets;
