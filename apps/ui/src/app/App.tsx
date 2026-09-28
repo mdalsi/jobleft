@@ -1,10 +1,10 @@
 // The app root: routes (see SCREENS in src/index.ts), the shell, the first-run onboarding, and the window title.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from 'antd';
 import { Art, LogoMark, Wordmark } from '../components/Art.tsx';
 import { ChatPanel, ConnectionBanner, Rail, TopBar, type ScreenId } from '../components/Shell.tsx';
-import { ErrorBoundary } from '../components/States.tsx';
+import { ErrorBoundary, Loading } from '../components/States.tsx';
 import { AssistantScreen } from '../screens/Assistant.tsx';
 import { Dashboard } from '../screens/Dashboard.tsx';
 import { InterviewScreen } from '../screens/Interview.tsx';
@@ -45,6 +45,7 @@ export function App() {
   const setup = useOnboarding();
   useCrawlWatcher();
   const gateChecked = useRef(false);
+  const [gateDone, setGateDone] = useState(false);
 
   // At launch, a setup that was never finished or skipped opens again, on the step the person was on
   // (JL-onboarding-11: a saved preference alone never counts as a finished setup).
@@ -57,9 +58,15 @@ export function App() {
       void call('putOnboarding', { body: { ...setup.data, status: 'skipped' } }).then(() => undefined, () => undefined);
     }
     if (setupPending(setup.data, legacy) && route[0] !== 'onboarding') navigate('onboarding', { replace: true });
+    setGateDone(true);
   }, [profile.data, setup.data]);
 
   if (!hasToken()) return <NoToken />;
+  // Nothing to route to until the setup question is answered: rendering the feed first put the jobs screen on the
+  // person's screen for as long as the answer took, then yanked them to the setup. A screen that cannot be used is
+  // worse than a moment of "getting ready", and on a machine busy with its first crawl it lasted seconds.
+  // A failed call falls through, so an unreachable service still shows its own error instead of waiting forever.
+  if (!gateDone && !setup.error && !profile.error) return <main className="jl-onboard"><Loading label="Getting ready" /></main>;
   if (route[0] === 'onboarding') {
     document.title = 'Welcome · jobleft';
     return <ErrorBoundary label="Setup stopped working"><Onboarding /></ErrorBoundary>;

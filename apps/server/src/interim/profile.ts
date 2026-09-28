@@ -50,6 +50,19 @@ export class ProfileService {
     return this.db.prepare("SELECT 1 FROM srv_profile WHERE id = 'default'").get() !== undefined;
   }
 
+  /**
+   * True once the profile holds facts. A blank save is not a profile: the setup writes the profile as you walk it and
+   * so does the Profile screen the moment it is saved, so a first run that only brushed against Profile left a row
+   * with every field empty - and the setup then never opened again (JL-onboarding-11: a saved preference alone never
+   * counts as a finished setup). Empty facts always hash to the same version, so comparing it to the empty profile is
+   * the whole test.
+   */
+  hasFacts(): boolean {
+    const r = this.db.prepare("SELECT data FROM srv_profile WHERE id = 'default'").get() as { data: string } | undefined;
+    if (!r) return false;
+    return profileVersionOf(parseJson<ProfileInput>(r.data, emptyProfileInput())) !== profileVersionOf(emptyProfileInput());
+  }
+
   get(): Profile {
     const r = this.db.prepare("SELECT data, version, updated_at FROM srv_profile WHERE id = 'default'").get() as { data: string; version: string; updated_at: string } | undefined;
     const input = r ? parseJson<ProfileInput>(r.data, emptyProfileInput()) : emptyProfileInput();
