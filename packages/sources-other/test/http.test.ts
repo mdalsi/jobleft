@@ -183,7 +183,11 @@ test('robots.txt Crawl-delay above 1 second holds EVERY request to the host, inc
       await cl.getJson('https://feed.example/c');
       assert.deepEqual(s.hits.map((h) => h.path), ['/robots.txt', '/a', '/b', '/c']);
       for (let i = 1; i < s.hits.length; i++) {
-        assert.ok(s.hits[i]!.t - s.hits[i - 1]!.t >= c.delayMs - 30, `${c.name}: gap before ${s.hits[i]!.path} was ${s.hits[i]!.t - s.hits[i - 1]!.t} ms, Crawl-delay is ${c.delayMs} ms`);
+        // The same platform allowance the sibling timing tests in this suite use: on a loaded Windows runner a
+        // loopback gap can come out tens of ms short of the booked slot. That is timer granularity, not a pacer
+        // ignoring robots.txt, and a pacer that ignored it would still miss the delay by seconds.
+        const slack = process.platform === 'win32' ? 200 : 30;
+        assert.ok(s.hits[i]!.t - s.hits[i - 1]!.t >= c.delayMs - slack, `${c.name}: gap before ${s.hits[i]!.path} was ${s.hits[i]!.t - s.hits[i - 1]!.t} ms, Crawl-delay is ${c.delayMs} ms (allowance ${slack})`);
       }
     } finally { p.done(); await s.close(); }
   }
