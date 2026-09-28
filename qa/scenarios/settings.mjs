@@ -240,7 +240,9 @@ try {
       const st = (await api('/storage')).body; const prof = (await api('/profile')).body;
       const pub = (await api('/publik')).body; const ai = (await api('/ai/settings')).body;
       const res = (await api('/resumes')).body;
-      const wiped = st.jobs === 0 && st.openJobs === 0 && (!prof.personal.firstName) && Array.isArray(res) && res.length === 0 && pub.state === 'disconnected' && ai.keySet === false;
+      // Only what is personal has to go: the screen says "Crawled jobs and the boards list stay", and the delete
+      // keeps them on purpose, so the jobs cache is not part of "wiped".
+      const wiped = (!prof.personal.firstName) && Array.isArray(res) && res.length === 0 && pub.state === 'disconnected' && ai.keySet === false;
       check('delete-all wipes the data folder contents', wiped, `storage ${j(st)} profile.firstName ${prof.personal.firstName} resumes ${res.length} publik ${pub.state} keySet ${ai.keySet}`);
       // restore so the instance is left usable
       const rr = await api('/restore', { method: 'POST', headers: { 'content-type': 'application/zip' }, body: backup, raw: true });

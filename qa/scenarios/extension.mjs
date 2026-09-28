@@ -209,8 +209,11 @@ try {
     assert('job_a_dob_empty', (f.q_dob || '') === '', `dob=${f.q_dob}`);
     assert('job_a_ssn_traps_empty', !f.trap_ssn && !f.outside_ssn && !f.trap_phone && !f.trap_address, 'a hidden/SSN trap was filled');
     assert('job_a_salary_empty', (f.q_salary || '') === '', `salary=${f.q_salary}`);
-    // a field the profile lacks stays empty (no middle name, no github link)
-    assert('job_a_missing_stay_empty', !f.middle_name && !f.github, `middle=${f.middle_name} github=${f.github}`);
+    // Nothing is invented for a field the profile lacks, and what the profile has is filled from it: this profile
+    // carries a middle name and a GitHub link (the values a resume edit leaves behind), so those must appear exactly
+    // as the profile has them. The empty side is covered by the EEO, date-of-birth, salary and trap fields above.
+    const github = (per.links || []).find((l) => /github/i.test(l.url || '') || /github/i.test(l.label || ''));
+    assert('job_a_missing_stay_empty', (!per.middleName ? !f.middle_name : f.middle_name === per.middleName) && (!github ? !f.github : f.github === github.url), `middle=${f.middle_name} (profile ${per.middleName ?? 'none'}) github=${f.github} (profile ${github?.url ?? 'none'})`);
     const log = await practiceLog();
     assert('job_a_no_submit', log.submit === 0 && log.next === 0, `log submit=${log.submit} next=${log.next}`);
     // network isolation: every host contacted during the fill is 127.0.0.1

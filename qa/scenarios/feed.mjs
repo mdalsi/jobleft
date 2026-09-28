@@ -164,7 +164,7 @@ try {
 
   // Counts vs badges.
   const badges = await p.eval(`Object.fromEntries([...document.querySelectorAll('.jl-topbar-tabs a')].map(a => { const m = (a.getAttribute('aria-label') || '').match(/^(\\w+), (\\d+)$/); return m ? [m[1], +m[2]] : [a.innerText.trim(), null]; }))`);
-  for (const [tab, view] of [['Liked', 'liked'], ['Applied', 'applied'], ['External', 'external']]) {
+  for (const [tab, view] of [['Liked', 'liked'], ['Applications', 'applied'], ['External', 'external']]) {
     const t = await api(`/tracker?view=${view}&limit=100`);
     const n = t.status === 200 ? t.body.items.length : -1;
     check(`counts: ${tab} badge equals saved ${view} jobs`, badges[tab] === n, `badge ${badges[tab]} vs ${n}`);

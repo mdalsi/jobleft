@@ -243,9 +243,13 @@ const AUDIT = `(() => {
   out.overflowX = document.documentElement.scrollWidth > window.innerWidth + 1;
   for (const e of document.querySelectorAll('.ant-modal-close, .ant-drawer-close, [aria-label^="Close"]')) { if (!vis(e)) continue; const r = e.getBoundingClientRect(); if (r.top < 0 || r.left < 0 || r.bottom > innerHeight || r.right > innerWidth) out.offscreen.push(e.getAttribute('aria-label') || e.className); }
   const text = document.body.innerText + ' ' + [...document.querySelectorAll('[title],[aria-label],[placeholder],img[alt]')].map((e) => [e.getAttribute('title'), e.getAttribute('aria-label'), e.getAttribute('placeholder'), e.getAttribute('alt')].filter(Boolean).join(' ')).join(' ') + ' ' + document.title;
-  const words = ['job' + 'right', 'or' + 'ion', 'tur' + 'bo', 'credit', 'applicants', 'early applicant', 'top applicant', 'not visible on', 'no h-1b', 'no h1b', 'does not sponsor', 'undefined', 'null', 'nan', '[object object]', 'lorem', 'coming soon', 'upgrade'];
+  const words = ['job' + 'right', 'or' + 'ion', 'tur' + 'bo', 'applicants', 'early applicant', 'top applicant', 'not visible on', 'no h-1b', 'no h1b', 'does not sponsor', 'undefined', 'null', 'nan', '[object object]', 'lorem', 'coming soon', 'upgrade'];
   for (const w of words) { const re = new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\$&') + '([^a-z0-9]|$)', 'i'); if (re.test(text)) { const i = text.toLowerCase().indexOf(w); out.banned.push(w + ': \u2026' + text.slice(Math.max(0, i - 40), i + 40).replace(/\\s+/g, ' ') + '\u2026'); } }
   if (/\\$0(\\.00)?(?![.\\d])/.test(text)) out.banned.push('$0 found');
+  // "credit(s)" is banned as the app's own promise (the free daily credits); a posting that mentions Credit Cards,
+  // credit risk or a credit union is data, not copy (the same carve-out as qa/scenarios/feed.mjs).
+  const credit = /\\bcredits?\\b(?! risk| card| union)/i.exec(text);
+  if (credit) out.banned.push('credit: \u2026' + text.slice(Math.max(0, credit.index - 40), credit.index + 40).replace(/\s+/g, ' ') + '\u2026');
   out.text = text.length;
   return out;
 })()`;
