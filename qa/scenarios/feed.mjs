@@ -54,9 +54,13 @@ const FACT = {
   postedWithin: (j, v, unk) => (j.postedAt && Date.now() - Date.parse(j.postedAt) <= WIN[v] + 2 * 36e5) || (unk && !j.postedAt),
   maxYearsRequired: (j, v, unk) => (j.yearsRequired && j.yearsRequired.min <= v) || (unk && !j.yearsRequired),
   minAnnualPayUsd: (j, v, unk) => (j.pay && j.pay.currency === 'USD' && (j.pay.annualMax ?? j.pay.annualMin) >= v) || (unk && !j.pay),
-  countries: (j, v, unk) => (j.places || []).some((p) => v.includes(p.country)) || (j.remoteScope?.regions || []).some((r) => v.includes(r)) || (unk && (j.places || []).every((p) => !p.country)),
+  countries: (j, v, unk) => (j.places || []).some((p) => v.includes(p.country)) || (j.remoteScope?.regions || []).some((r) => v.includes(r) || r === 'WORLDWIDE' || v.some((c) => (AREA_OF[c] || []).includes(r))) || (unk && (j.places || []).every((p) => !p.country)),
 };
 const UNK = { levels: 'level', employmentTypes: 'employmentType', workModels: 'workModel', postedWithin: 'postedAt', maxYearsRequired: 'years', minAnnualPayUsd: 'pay', countries: 'place' };
+
+/** The remote area a posting uses for a country (apps/server/src/interim/jobs.ts AREAS_OF_COUNTRY): "Remote, North
+ *  America" is open to people in Canada, and a WORLDWIDE posting is open to anyone. */
+const AREA_OF = { CA: ['NA'], GB: ['EMEA'], IE: ['EU', 'EMEA'], DE: ['EU', 'EMEA'], AU: ['APAC'] };
 
 async function exactness(name, filter) {
   const r = await pageAll(filter);
