@@ -98,7 +98,14 @@ test('the server stops within 10 seconds after its parent is killed', async () =
   const code = await waitExit(a.child, 12000);
   assert.equal(code, 0);
   assert.ok(Date.now() - t0 < 10000);
-  const r = await raw(info.port, { path: '/api/v1/health' }).catch(() => null);
+  // The child is gone (the exit above proved it); Windows needs a moment to hand a listening socket back, so give the
+  // port the same kind of allowance the timing tests in this suite use rather than reading it the instant the process
+  // reports its exit. A server that really kept the port still fails this, a second later.
+  let r = await raw(info.port, { path: '/api/v1/health' }).catch(() => null);
+  for (let i = 0; i < 10 && r !== null; i++) {
+    await new Promise((res) => setTimeout(res, 200));
+    r = await raw(info.port, { path: '/api/v1/health' }).catch(() => null);
+  }
   assert.equal(r, null, 'the port is closed');
   cleanup(home);
 });
