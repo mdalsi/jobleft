@@ -67,14 +67,14 @@ export interface ResumeCalls {
 }
 
 /**
- * "Use another file" on the resume step: the file it replaces is deleted, and when that file was the primary resume
- * the new file takes its place (JL-onboarding-4). A file that cannot be deleted (it has tailored versions) stays.
+ * "Use another file" on the resume step: the file the person kept takes the primary place (JL-onboarding-4), and the
+ * file it replaces is deleted. A file that cannot be deleted (it has tailored versions) stays, and that no longer
+ * costs the new file the primary place, because the place is taken before the delete is attempted.
  */
 export async function replaceUpload(api: ResumeCalls, before: string | null, now: string): Promise<void> {
   if (!before || before === now) return;
-  try {
-    const wasPrimary = await api.isPrimary(before);
-    await api.remove(before);
-    if (wasPrimary) await api.makePrimary(now);
-  } catch { /* already gone, or it has tailored versions: it stays a resume of its own */ }
+  // Unconditional: a library that already had a primary resume otherwise left the file the person just kept behind it,
+  // and a delete that throws (its own versions, a cover letter) used to swallow the primary move with it.
+  if (!(await api.isPrimary(now))) await api.makePrimary(now);
+  try { await api.remove(before); } catch { /* it has tailored versions: it stays a resume of its own */ }
 }

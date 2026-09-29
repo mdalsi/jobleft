@@ -59,7 +59,7 @@ test('a typed job function never duplicates a listed or chosen one (JL-onboardin
   assert.equal(addJobFunction([], 'Z'.repeat(400), listed)[0]!.length, 100);
 });
 
-test('"Use another file" replaces the file, and the kept file becomes primary when the replaced one was (JL-onboarding-4)', async () => {
+test('"Use another file" replaces the file, and the kept file takes the primary place (JL-onboarding-4)', async () => {
   const { replaceUpload } = await import('../src/lib/onboarding.ts');
   const rows = new Map([['res_a', true], ['res_old', false]]);
   const api = {
@@ -75,4 +75,8 @@ test('"Use another file" replaces the file, and the kept file becomes primary wh
   assert.deepEqual([...rows.entries()].sort(), [['res_c', true], ['res_old', false]]);
   await replaceUpload(api, null, 'res_c');
   assert.equal(rows.size, 2);
+  // Even when the file being replaced was not the primary one: the person kept this file, so it takes the place.
+  rows.set('res_new', false);
+  await replaceUpload(api, 'res_old', 'res_new');
+  assert.deepEqual([...rows.entries()].sort(), [['res_c', false], ['res_new', true]]);
 });
