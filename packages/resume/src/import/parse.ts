@@ -96,7 +96,7 @@ function looksLikeName(t: string): boolean {
 /** Words that begin an address line, in the languages the contact block sees ("Via Roma 12" is a street, not a name). */
 const ADDRESS_HEAD = /^(?:via|viale|piazzale|piazza|corso|strada|largo|vicolo|street|avenue|road|drive|lane|way|place|boulevard|court|square|rue|calle|apartment|apt|suite|ste|unit|flat|floor|p\.?o\.? box)\b/i;
 const NAME_WORD = /^[\p{Lu}][\p{L}'’.-]*$/u;
-const NAME_PARTICLE = /^(?:de|da|das|do|dos|del|della|dello|degli|dei|di|du|van|von|der|den|ter|ten|te|op|la|le|les|los|las|el|al|bin|bint|ibn|ben|abu|san|santa|st|mac|mc|o')$/i;
+const NAME_PARTICLE = /^(?:de|da|dal|dalla|dai|dagli|das|do|dos|del|della|dello|degli|dei|di|du|van|von|der|den|ter|ten|te|op|la|le|les|los|las|el|al|bin|bint|ibn|ben|abu|san|santa|st|mac|mc|o')$/i;
 
 /**
  * The loose fallback for a name the strict shape above refuses (a surname in capitals, a particle). Every word must
