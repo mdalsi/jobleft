@@ -93,7 +93,7 @@ function looksLikeName(t: string): boolean {
   return w.every((x) => /^[\p{Lu}][\p{L}'’.-]*$/u.test(x) || /^(?:de|da|del|van|von|der|den|la|le|di|du|bin|al)$/i.test(x));
 }
 
-/** Words that begin an address line, in the languages the contact block sees ("Via 37139" is a street, not a name). */
+/** Words that begin an address line, in the languages the contact block sees ("Via Roma 12" is a street, not a name). */
 const ADDRESS_HEAD = /^(?:via|viale|piazzale|piazza|corso|strada|largo|vicolo|street|avenue|road|drive|lane|way|place|boulevard|court|square|rue|calle|apartment|apt|suite|ste|unit|flat|floor|p\.?o\.? box)\b/i;
 const NAME_WORD = /^[\p{Lu}][\p{L}'’.-]*$/u;
 const NAME_PARTICLE = /^(?:de|da|das|do|dos|del|della|dello|degli|dei|di|du|van|von|der|den|ter|ten|te|op|la|le|les|los|las|el|al|bin|bint|ibn|ben|abu|san|santa|st|mac|mc|o')$/i;
@@ -101,7 +101,7 @@ const NAME_PARTICLE = /^(?:de|da|das|do|dos|del|della|dello|degli|dei|di|du|van|
 /**
  * The loose fallback for a name the strict shape above refuses (a surname in capitals, a particle). Every word must
  * be letters: an address or anything holding a figure is never a name. A street address was taken as the name here
- * ("Via 37139"), and its last name "37139" then failed the profile's letter rule on a setup screen that has no name
+ * ("Via Roma 12"), and its last name "12" then failed the profile's letter rule on a setup screen that has no name
  * box, leaving the person stuck with nothing to fix.
  */
 function isNameShaped(t: string): boolean {

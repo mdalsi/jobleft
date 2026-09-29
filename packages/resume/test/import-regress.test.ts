@@ -27,21 +27,21 @@ test('bullets drawn as shapes are split where the lines end, and the report says
 });
 
 test('a street address is never read as the person’s name', async () => {
-  // A contact line that starts with a capital and holds a figure used to be taken as the name: "Via 37139" became
-  // first name "Via", last name "37139", and the last name then failed the profile's letter rule on a setup screen
+  // A contact line that starts with a capital and holds a figure used to be taken as the name: "Via Roma 12" became
+  // first name "Via", last name "12", and the last name then failed the profile's letter rule on a setup screen
   // with no box for it. The address is not a name; a real name on its own line still is.
-  const withAddress = ['Via 37139', 'nicoladalsanto11@gmail.com', '+39 392 207 9133', 'Verona, VR'].join('\n');
+  const withAddress = ['Via Roma 12', 'jordan.qa@example.com', '555-0100', 'Bologna, BO'].join('\n');
   const a = (await importInProcess(Buffer.from(withAddress, 'utf8'), 'cv.txt', 'text/plain')).proposedProfile;
   assert.equal(a.personal.firstName, null, 'no first name comes out of a street address');
   assert.equal(a.personal.lastName, null, 'no last name comes out of a street address');
-  assert.equal(a.personal.email, 'nicoladalsanto11@gmail.com');
+  assert.equal(a.personal.email, 'jordan.qa@example.com');
 
-  const withName = ['Nicola Dalsanto', 'Via 37139, 37139 Verona, VR', 'nicoladalsanto11@gmail.com', '+39 392 207 9133'].join('\n');
+  const withName = ['Jordan Testwell', 'Via Roma 12, 40100 Bologna, BO', 'jordan.qa@example.com', '555-0100'].join('\n');
   const b = (await importInProcess(Buffer.from(withName, 'utf8'), 'cv.txt', 'text/plain')).proposedProfile;
-  assert.equal(b.personal.firstName, 'Nicola', 'a name on its own line is still read');
-  assert.equal(b.personal.lastName, 'Dalsanto');
-  assert.equal(b.personal.city, 'Verona');
-  assert.equal(b.personal.region, 'VR');
+  assert.equal(b.personal.firstName, 'Jordan', 'a name on its own line is still read');
+  assert.equal(b.personal.lastName, 'Testwell');
+  assert.equal(b.personal.city, 'Bologna');
+  assert.equal(b.personal.region, 'BO');
 });
 
 test('an exported resume with an organisation word in a title and B.B.A. reads back the same', async () => {
