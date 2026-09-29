@@ -208,11 +208,19 @@ try {
     await p.waitFor(`/Use the facts/.test(document.body.innerText)`, 20000);
     await p.clickText('Use another file'); await sleep(300);
     await uploadInPage(p, join(FIX, 'jordan-layout-table.docx'), 'kept-one.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    await p.waitFor(`/Use the facts/.test(document.body.innerText)`, 20000); await sleep(1500);
+    await p.waitFor(`/Use the facts/.test(document.body.innerText)`, 20000);
+    // The file the person kept has to end up the primary one. Wait for that rather than sampling after a fixed sleep,
+    // and never accept "one resume left" as done: part way through the upload that one resume is still the old file,
+    // which is how this check reported the previous file as primary when a runner was merely slower.
+    const keptIn = (rs) => rs.filter((r) => /kept-one/.test(r.file?.fileName || r.name));
+    for (let i = 0; i < 20; i++) {
+      if (keptIn((await api('GET', '/resumes')).json).some((r) => r.isPrimary)) break;
+      await sleep(500);
+    }
     await p.shot(join(SHOTS, 'onb-step4.png'));
     const rs = (await api('GET', '/resumes')).json;
     const primary = rs.find((r) => r.isPrimary);
-    check('use-another-file-keeps-the-kept-file-primary', rs.length === 1 || (primary && /kept-one/.test(primary.file?.fileName || primary.name)), `resumes ${JSON.stringify(rs.map((r) => [r.name, r.isPrimary]))}`);
+    check('use-another-file-keeps-the-kept-file-primary', !!primary && /kept-one/.test(primary.file?.fileName || primary.name), `resumes ${JSON.stringify(rs.map((r) => [r.name, r.isPrimary]))}`);
     await p.clickText('Next'); await waitHeading(p, 'about you');
     // ---------- step 5 ----------
     await audit(p, 'step5');

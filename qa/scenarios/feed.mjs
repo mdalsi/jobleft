@@ -193,7 +193,7 @@ try {
   } else skip('counts: "N jobs" equals the search total', 'no search request seen');
 
   // Filter from the screen: Experience level "Entry Level" → every card shows "Entry"; then Job type keeps it.
-  const applyPop = async (label, option) => {
+  const applyPop = async (label, option, key, value) => {
     p.clearRequests();
     await p.click(`button[aria-label^="${label}"]`);
     if (!(await p.waitFor(`document.querySelector('${POP}')`, 5000))) return null;
@@ -201,17 +201,26 @@ try {
     await p.clickText('Apply', POP);
     await p.waitFor(`document.querySelector('${POP}') === null`, 5000);
     await p.waitFor(`!document.body.innerText.includes('Updating')`, 15000);
-    const reqs = p.requests().filter((r) => r.url.includes('/jobs/search'));
-    return picked && reqs.length ? JSON.parse(reqs[reqs.length - 1].body) : null;
+    // The search this apply sends is the one the filter has to show, so wait for that request instead of reading
+    // whichever is last: on a busy runner the request of the filter before this one can still arrive after
+    // clearRequests, and the check then reported a filter that had dropped what the person had just picked.
+    const bodies = () => p.requests().filter((r) => r.url.includes('/jobs/search')).map((r) => { try { return JSON.parse(r.body); } catch { return null; } });
+    const mine = () => bodies().find((b) => b && (b.filter?.[key] || []).includes(value)) ?? null;
+    let sent = mine();
+    for (let i = 0; i < 40 && !sent; i++) {
+      await p.waitFor('false', 250);
+      sent = mine();
+    }
+    return picked && sent ? sent : null;
   };
-  const r1 = await applyPop('Experience level filter', 'Entry Level');
+  const r1 = await applyPop('Experience level filter', 'Entry Level', 'levels', 'entry');
   if (!r1) skip('UI filter: Entry Level', 'could not open or apply the Experience level popover');
   else {
     const cards = await p.eval(`[...document.querySelectorAll('${cardsSel}')].map(c => [c.getAttribute('data-job-id'), c.innerText])`);
     const badCards = cards.filter(([, t]) => !/\bEntry\b/.test(t) || /\bSenior Level\b/.test(t));
     check('UI filter: every card under "Entry Level" shows Entry and not Senior', cards.length > 0 && !badCards.length, cards.length ? badCards.slice(0, 3).map(([id]) => id).join(', ') : 'no cards');
     await p.shot(join(SHOTS, 'feed-02-entry.png'));
-    const r2 = await applyPop('Job type filter', 'Full-time');
+    const r2 = await applyPop('Job type filter', 'Full-time', 'employmentTypes', 'full_time');
     if (!r2) skip('UI filter: filters combine', 'could not apply Job type');
     else check('UI filter: a second filter keeps the first (Entry Level + Full-time)', (r2.filter.levels || []).includes('entry') && (r2.filter.employmentTypes || []).includes('full_time'), `request filter ${JSON.stringify(r2.filter)}`);
     await p.shot(join(SHOTS, 'feed-03-combined.png'));
