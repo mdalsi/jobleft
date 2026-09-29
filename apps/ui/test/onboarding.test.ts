@@ -80,3 +80,22 @@ test('"Use another file" replaces the file, and the kept file takes the primary 
   await replaceUpload(api, 'res_old', 'res_new');
   assert.deepEqual([...rows.entries()].sort(), [['res_c', false], ['res_new', true]]);
 });
+
+test('the save carries the name on the About you screen, not the file guess behind it (JL-onboarding-15)', async () => {
+  const { bodyToSave } = await import('../src/lib/onboarding.ts');
+  const { cleanForSave } = await import('../src/lib/profileErrors.ts');
+  const { profileIssues } = await import('@jobleft/contracts');
+  const person = (lastName: string) => ({
+    personal: { firstName: 'Nicola', middleName: null, lastName, email: 'nicola@example.com', phone: '+39 000 0000000', addressLine: null, city: 'Verona', region: 'Italy', postalCode: null, country: null, links: [] },
+    summary: null, education: [], certifications: [], projects: [], work: [], skills: [],
+    preferences: { jobFunctions: [], targetTitles: [], employmentTypes: [], workModels: [], levels: [], countries: [], places: [], minAnnualPayUsd: null, industries: [], companyStages: [], roleTypes: [], excludedCompanies: [] },
+    workAuthorization: { usAuthorized: null, needsSponsorship: null, usCitizen: null, hasSecurityClearance: null, authorizedCountries: [] },
+    eeo: { disability: null, veteran: null, gender: null, lgbtq: null, race: null, hispanicOrLatino: null, sexualOrientation: [], pronouns: null },
+    extraSections: [],
+  });
+  // The file's own guess at the surname is a street address the importer once took for a name: it holds no letters.
+  const pending = { resumeId: 'res_1', report: null, proposed: person('37139'), useFacts: true } as never;
+  const body = bodyToSave(cleanForSave(person('Dal Santo')) as never, pending) as ReturnType<typeof person>;
+  assert.equal(body.personal.lastName, 'Dal Santo', 'the surname on the screen is the one that gets saved');
+  assert.deepEqual(profileIssues(body as never, null).filter((i) => i.path === '/personal/lastName'), [], 'and it is a surname the service accepts');
+});

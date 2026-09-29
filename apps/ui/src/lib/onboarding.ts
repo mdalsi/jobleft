@@ -26,8 +26,21 @@ export function keptState(status: OnboardingState['status'], step: number, d: Pr
 }
 
 /** What Next, Skip and the last step save: the draft, plus the resume's facts when the person chose to use them. */
+/** The personal fields the About you step shows: what is on that screen is what gets saved. */
+const ABOUT_FIELDS: Array<keyof ProfileInput['personal']> = ['firstName', 'lastName', 'email', 'phone', 'city', 'region'];
+
 export function bodyToSave(d: ProfileInput, pending: PendingImport | null): ProfileInput {
-  return pending?.useFacts ? mergeImported(d, pending.proposed) : d;
+  if (!pending?.useFacts) return d;
+  const merged = mergeImported(d, pending.proposed);
+  // The file is authoritative for the facts the person did not type, but never for a field this step shows. A name
+  // typed here used to be replaced by the file's guess when the save was built, so the save carried a value nobody
+  // could see - and when it was refused the screen blamed a field that looked right (JL-onboarding-15).
+  const personal = { ...merged.personal };
+  for (const k of ABOUT_FIELDS) {
+    const typed = d.personal[k];
+    if (typed !== null && typed !== '') (personal as Record<string, unknown>)[k] = typed;
+  }
+  return { ...merged, personal };
 }
 
 /** The state once setup is finished or skipped: nothing waits. A setup reopened after it was finished stays finished. */
